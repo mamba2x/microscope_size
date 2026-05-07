@@ -1,0 +1,150 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Microscope Specimen Size Calculator</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+</head>
+<body>
+    <div class="page-shell">
+        <header class="hero">
+            <div>
+                <p class="eyebrow">CSC 442 Project 1</p>
+                <h1>Microscope Specimen Size Calculator</h1>
+                <p class="hero-copy">
+                    Upload a specimen image, enter the measured microscope size, choose the microscope type,
+                    and calculate the real-life size with a full formula breakdown.
+                </p>
+            </div>
+        </header>
+
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    <div class="flash flash-{{ category }}">{{ message }}</div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+
+        {% if error_message %}
+            <div class="flash flash-error">{{ error_message }}</div>
+        {% endif %}
+
+        <main class="grid">
+            <section class="card">
+                <h2>New Calculation</h2>
+                <form method="post" enctype="multipart/form-data" class="form-grid">
+                    <label>
+                        <span>Username</span>
+                        <input type="text" name="username" value="{{ form_data.username }}" required>
+                    </label>
+
+                    <label>
+                        <span>Measured size (mm)</span>
+                        <input type="number" name="measured_size_mm" step="any" min="0.000001" value="{{ form_data.measured_size_mm }}" required>
+                    </label>
+
+                    <label>
+                        <span>Microscope type</span>
+                        <select name="microscope_type" required>
+                            {% for microscope in microscope_types %}
+                                <option value="{{ microscope }}" {% if form_data.microscope_type == microscope %}selected{% endif %}>{{ microscope }}</option>
+                            {% endfor %}
+                        </select>
+                    </label>
+
+                    <label>
+                        <span>Output unit</span>
+                        <select name="output_unit" required>
+                            {% for unit_key, unit_label in units.items() %}
+                                <option value="{{ unit_key }}" {% if form_data.output_unit == unit_key %}selected{% endif %}>{{ unit_label }}</option>
+                            {% endfor %}
+                        </select>
+                    </label>
+
+                    <label class="full">
+                        <span>Specimen image</span>
+                        <input type="file" name="specimen_image" accept=".png,.jpg,.jpeg,.gif,.bmp" required>
+                    </label>
+
+                    <button type="submit">Calculate and Save</button>
+                </form>
+            </section>
+
+            <section class="card">
+                <h2>Result</h2>
+                {% if result %}
+                    <div class="result-box">
+                        <p><strong>Username:</strong> {{ result.username }}</p>
+                        <p><strong>Microscope:</strong> {{ result.microscope_type }}</p>
+                        <p><strong>Measured size:</strong> {{ '%.6f'|format(result.measured_size_mm) }} mm</p>
+                        <p><strong>Real size:</strong> {{ '%.6f'|format(result.output_value) }} {{ units[result.output_unit] }}</p>
+                        <p><strong>Uploaded image:</strong></p>
+                        <img
+                            class="result-image"
+                            src="{{ url_for('uploaded_file', filename=result.image_path.split('/', 1)[1]) }}"
+                            alt="Uploaded specimen image"
+                        >
+                    </div>
+                    <pre>{{ result.breakdown }}</pre>
+                {% else %}
+                    <p class="placeholder">Your result and formula breakdown will appear here after calculation.</p>
+                {% endif %}
+            </section>
+        </main>
+
+        <section class="card history-card">
+            <div class="history-header">
+                <h2>Saved Records</h2>
+                <form method="post" action="{{ url_for('clear_records') }}">
+                    <button type="submit" class="danger">Delete All Records</button>
+                </form>
+            </div>
+
+            {% if rows %}
+                <div class="table-wrap">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>Username</th>
+                                <th>Measured (mm)</th>
+                                <th>Microscope</th>
+                                <th>Result</th>
+                                <th>Image</th>
+                                <th>Date</th>
+                                <th>Action</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for row in rows %}
+                                <tr>
+                                    <td>{{ row.id }}</td>
+                                    <td>{{ row.username }}</td>
+                                    <td>{{ '%.4f'|format(row.measured_size_mm) }}</td>
+                                    <td>{{ row.microscope_type }}</td>
+                                    <td>{{ '%.6f'|format(row.output_value) }} {{ units[row.output_unit] }}</td>
+                                    <td>
+                                        <a href="{{ url_for('uploaded_file', filename=row.image_path.split('/', 1)[1]) }}" target="_blank">
+                                            View image
+                                        </a>
+                                    </td>
+                                    <td>{{ row.created_at }}</td>
+                                    <td>
+                                        <form method="post" action="{{ url_for('delete_record', record_id=row.id) }}">
+                                            <button type="submit" class="danger">Delete</button>
+                                        </form>
+                                    </td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            {% else %}
+                <p class="placeholder">No saved records yet.</p>
+            {% endif %}
+        </section>
+    </div>
+</body>
+</html>
